@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pomodoro Battle</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --paper: #fffdf8;
+      --ink: #2f241a;
+      --muted: #6e5a45;
+      --accent: #8b5e34;
+      --accent-2: #c2915d;
+      --line: #dfd2be;
+      --good: #73955b;
+      --bad: #b7634f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: linear-gradient(180deg, #f8f3ea 0%, #efe2cc 100%);
+      color: var(--ink);
+    }
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    .hero, .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(87, 63, 36, 0.08);
+    }
+    .hero { padding: 24px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .left, .right { display: grid; gap: 18px; align-content: start; }
+    .card { padding: 18px; }
+    .timer {
+      text-align: center;
+      padding: 16px 8px 8px;
+    }
+    .mode-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #f1e5d4;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+    .clock {
+      font-size: 64px;
+      font-weight: 700;
+      margin: 14px 0 8px;
+      color: var(--accent);
+    }
+    .controls, .row, .gear-grid, .stats-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .stats-grid { gap: 12px; }
+    .stat, .loot-item {
+      flex: 1 1 120px;
+      background: #fbf7f0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    button, select {
+      font: inherit;
+      border-radius: 12px;
+      border: 1px solid #cdb69b;
+      padding: 10px 14px;
+      background: #fff9f0;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    button.primary {
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      color: white;
+      border-color: var(--accent);
+    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .battle {
+      display: grid;
+      grid-template-columns: 1fr 140px 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+    .unit {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      background: #fcfaf6;
+    }
+    .unit h3 { margin-bottom: 8px; }
+    .hpbar {
+      height: 14px;
+      background: #e6d8c3;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .fill {
+      height: 100%;
+      width: 100%;
+      transition: width .25s ease;
+      background: linear-gradient(90deg, #84a96c, var(--good));
+    }
+    .enemy .fill { background: linear-gradient(90deg, #d08a73, var(--bad)); }
+    .vs {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .log {
+      min-height: 180px;
+      max-height: 280px;
+      overflow: auto;
+      background: #fbf7f0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      line-height: 1.7;
+    }
+    .log-entry { padding: 6px 0; border-bottom: 1px dashed #e7dccb; }
+    .log-entry:last-child { border-bottom: none; }
+    .muted { color: var(--muted); }
+    .focus-only { color: var(--good); font-weight: 700; }
+    .break-only { color: var(--bad); font-weight: 700; }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .battle { grid-template-columns: 1fr; }
+      .vs { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Pomodoro Battle</h1>
+      <p>A focus game built with HTML, CSS and JavaScript. During <strong>focus time</strong>, your character fights mobs automatically and gathers loot. During <strong>break time</strong>, you cannot battle, but you can manage loadout, swap gear and tune your build.</p>
+    </div>
+
+    <div class="grid">
+      <div class="left">
+        <div class="card timer">
+          <div class="mode-badge" id="modeBadge">Focus Phase</div>
+          <div class="clock" id="clock">25:00</div>
+          <p class="muted" id="phaseText">Auto-battle is active while you focus.</p>
+          <div class="controls">
+            <button class="primary" id="startBtn">Start</button>
+            <button id="pauseBtn">Pause</button>
+            <button id="resetBtn">Reset</button>
+            <button id="switchBtn">Switch Phase</button>
+          </div>
+          <div class="row" style="margin-top:12px; align-items:center; justify-content:center;">
+            <label for="focusLength">Focus</label>
+            <select id="focusLength"><option>25</option><option>30</option><option>45</option><option>50</option></select>
+            <label for="breakLength">Break</label>
+            <select id="breakLength"><option>5</option><option>10</option><option>15</option></select>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Character</h2>
+          <div class="stats-grid">
+            <div class="stat"><strong>Level</strong><div id="levelStat">1</div></div>
+            <div class="stat"><strong>Attack</strong><div id="atkStat">8</div></div>
+            <div class="stat"><strong>Defence</strong><div id="defStat">4</div></div>
+            <div class="stat"><strong>HP</strong><div id="hpStat">70</div></div>
+            <div class="stat"><strong>Coins</strong><div id="coinStat">0</div></div>
+            <div class="stat"><strong>Focus Wins</strong><div id="winsStat">0</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Loadout</h2>
+          <p class="muted">You can only equip gear during break time.</p>
+          <div class="gear-grid">
+            <div class="stat"><strong>Weapon</strong><div id="weaponSlot">Rusty Sword</div></div>
+            <div class="stat"><strong>Armour</strong><div id="armourSlot">Cloth Tunic</div></div>
+            <div class="stat"><strong>Charm</strong><div id="charmSlot">Plain Band</div></div>
+          </div>
+          <div class="row" style="margin-top:12px;">
+            <select id="inventorySelect"></select>
+            <button id="equipBtn">Equip Selected</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="card">
+          <h2>Battle Arena</h2>
+          <div class="battle">
+            <div class="unit">
+              <h3 id="playerName">Scholar Knight</h3>
+              <div class="muted" id="playerSummary">Balanced build</div>
+              <div class="hpbar"><div class="fill" id="playerHpFill"></div></div>
+              <div class="muted" id="playerHpText">70 / 70 HP</div>
+            </div>
+            <div class="vs">VS</div>
+            <div class="unit enemy">
+              <h3 id="enemyName">Slime</h3>
+              <div class="muted" id="enemySummary">Floor 1 mob</div>
+              <div class="hpbar"><div class="fill" id="enemyHpFill"></div></div>
+              <div class="muted" id="enemyHpText">40 / 40 HP</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Loot Bag</h2>
+          <div class="stats-grid" id="lootBag"></div>
+        </div>
+
+        <div class="card">
+          <h2>Battle Log</h2>
+          <div class="log" id="battleLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SAVE_KEY = 'pomodoro-battle-save';
+    const items = [
+      { id: 'rusty-sword', slot: 'weapon', name: 'Rusty Sword', atk: 2, def: 0, hp: 0 },
+      { id: 'iron-blade', slot: 'weapon', name: 'Iron Blade', atk: 5, def: 0, hp: 0 },
+      { id: 'hunter-bow', slot: 'weapon', name: 'Hunter Bow', atk: 4, def: 1, hp: 0 },
+      { id: 'cloth-tunic', slot: 'armour', name: 'Cloth Tunic', atk: 0, def: 1, hp: 6 },
+      { id: 'iron-mail', slot: 'armour', name: 'Iron Mail', atk: 0, def: 4, hp: 12 },
+      { id: 'ward-robe', slot: 'armour', name: 'Ward Robe', atk: 1, def: 2, hp: 10 },
+      { id: 'plain-band', slot: 'charm', name: 'Plain Band', atk: 0, def: 0, hp: 4 },
+      { id: 'ember-charm', slot: 'charm', name: 'Ember Charm', atk: 3, def: 0, hp: 0 },
+      { id: 'guard-charm', slot: 'charm', name: 'Guard Charm', atk: 0, def: 2, hp: 8 }
+    ];
+
+    const enemyPool = [
+      { name: 'Slime', atk: 4, def: 1, hp: 40 },
+      { name: 'Cave Bat', atk: 5, def: 1, hp: 36 },
+      { name: 'Goblin Scout', atk: 6, def: 2, hp: 48 },
+      { name: 'Stone Beetle', atk: 5, def: 4, hp: 58 },
+      { name: 'Bandit', atk: 7, def: 3, hp: 56 }
+    ];
+
+    const state = {
+      mode: 'focus',
+      running: false,
+      focusMinutes: 25,
+      breakMinutes: 5,
+      timeLeft: 25 * 60,
+      timer: null,
+      battleTimer: null,
+      floor: 1,
+      wins: 0,
+      coins: 0,
+      player: {
+        level: 1,
+        baseAtk: 6,
+        baseDef: 3,
+        baseHp: 60,
+        currentHp: 60,
+        weapon: 'rusty-sword',
+        armour: 'cloth-tunic',
+        charm: 'plain-band'
+      },
+      inventory: ['iron-blade', 'hunter-bow', 'iron-mail', 'ward-robe', 'ember-charm', 'guard-charm'],
+      lootCounts: {},
+      enemy: null,
+      logs: []
+    };
+
+    function getItem(id) { return items.find(i => i.id === id); }
+    function equippedStats() {
+      const gear = [getItem(state.player.weapon), getItem(state.player.armour), getItem(state.player.charm)];
+      return gear.reduce((acc, item) => {
+        acc.atk += item?.atk || 0;
+        acc.def += item?.def || 0;
+        acc.hp += item?.hp || 0;
+        return acc;
+      }, { atk: 0, def: 0, hp: 0 });
+    }
+    function playerStats() {
+      const gear = equippedStats();
+      return {
+        atk: state.player.baseAtk + (state.player.level - 1) * 2 + gear.atk,
+        def: state.player.baseDef + (state.player.level - 1) + gear.def,
+        hp: state.player.baseHp + (state.player.level - 1) * 10 + gear.hp
+      };
+    }
+    function addLog(text) {
+      state.logs.unshift(`${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${text}`);
+      state.logs = state.logs.slice(0, 12);
+      renderLog();
+      save();
+    }
+    function renderLog() {
+      const box = document.getElementById('battleLog');
+      box.innerHTML = state.logs.map(line => `<div class="log-entry">${line}</div>`).join('') || '<div class="muted">No events yet.</div>';
+    }
+    function spawnEnemy() {
+      const base = enemyPool[(state.floor - 1) % enemyPool.length];
+      const scale = 1 + (state.floor - 1) * 0.18;
+      state.enemy = {
+        name: state.floor % 5 === 0 ? `Elite ${base.name}` : base.name,
+        atk: Math.round(base.atk * scale),
+        def: Math.round(base.def * scale),
+        hp: Math.round(base.hp * scale),
+        currentHp: Math.round(base.hp * scale)
+      };
+    }
+    function save() {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        mode: state.mode,
+        focusMinutes: state.focusMinutes,
+        breakMinutes: state.breakMinutes,
+        timeLeft: state.timeLeft,
+        floor: state.floor,
+        wins: state.wins,
+        coins: state.coins,
+        player: state.player,
+        inventory: state.inventory,
+        lootCounts: state.lootCounts,
+        logs: state.logs
+      }));
+    }
+    function load() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return;
+        Object.assign(state, JSON.parse(raw));
+      } catch {}
+    }
+    function renderInventory() {
+      const select = document.getElementById('inventorySelect');
+      select.innerHTML = state.inventory.map(id => {
+        const item = getItem(id);
+        return `<option value="${id}">${item.name} (${item.slot}, +${item.atk} ATK / +${item.def} DEF / +${item.hp} HP)</option>`;
+      }).join('');
+    }
+    function renderLoot() {
+      const bag = document.getElementById('lootBag');
+      const keys = Object.keys(state.lootCounts);
+      if (!keys.length) {
+        bag.innerHTML = '<div class="loot-item">No loot yet. Focus sessions will bring drops.</div>';
+        return;
+      }
+      bag.innerHTML = keys.map(key => `<div class="loot-item"><strong>${getItem(key)?.name || key}</strong><div>x${state.lootCounts[key]}</div></div>`).join('');
+    }
+    function render() {
+      const p = playerStats();
+      if (!state.enemy) spawnEnemy();
+      state.player.currentHp = Math.min(state.player.currentHp || p.hp, p.hp);
+      document.getElementById('modeBadge').textContent = state.mode === 'focus' ? 'Focus Phase' : 'Break Phase';
+      document.getElementById('phaseText').textContent = state.mode === 'focus'
+        ? 'Auto-battle is active while you focus.'
+        : 'Battle is paused. Use break time to adjust loadout and prepare.';
+      document.getElementById('clock').textContent = `${String(Math.floor(state.timeLeft / 60)).padStart(2, '0')}:${String(state.timeLeft % 60).padStart(2, '0')}`;
+      document.getElementById('levelStat').textContent = state.player.level;
+      document.getElementById('atkStat').textContent = p.atk;
+      document.getElementById('defStat').textContent = p.def;
+      document.getElementById('hpStat').textContent = p.hp;
+      document.getElementById('coinStat').textContent = state.coins;
+      document.getElementById('winsStat').textContent = state.wins;
+      document.getElementById('weaponSlot').textContent = getItem(state.player.weapon).name;
+      document.getElementById('armourSlot').textContent = getItem(state.player.armour).name;
+      document.getElementById('charmSlot').textContent = getItem(state.player.charm).name;
+      document.getElementById('playerHpText').textContent = `${state.player.currentHp} / ${p.hp} HP`;
+      document.getElementById('playerHpFill').style.width = `${(state.player.currentHp / p.hp) * 100}%`;
+      document.getElementById('enemyName').textContent = state.enemy.name;
+      document.getElementById('enemySummary').textContent = `Floor ${state.floor} mob`;
+      document.getElementById('enemyHpText').textContent = `${Math.max(0, state.enemy.currentHp)} / ${state.enemy.hp} HP`;
+      document.getElementById('enemyHpFill').style.width = `${(Math.max(0, state.enemy.currentHp) / state.enemy.hp) * 100}%`;
+      document.getElementById('equipBtn').disabled = state.mode !== 'break';
+      document.getElementById('inventorySelect').disabled = state.mode !== 'break';
+      renderInventory();
+      renderLoot();
+      renderLog();
+      save();
+    }
+    function rewardLoot() {
+      const drop = state.inventory[Math.floor(Math.random() * state.inventory.length)] || items[Math.floor(Math.random() * items.length)].id;
+      state.lootCounts[drop] = (state.lootCounts[drop] || 0) + 1;
+      state.coins += 8 + state.floor * 3;
+      if (state.floor % 3 === 0) state.player.level += 1;
+      addLog(`Defeated ${state.enemy.name}, earned coins and found ${getItem(drop)?.name || drop}.`);
+      state.wins += 1;
+      state.floor += 1;
+      const p = playerStats();
+      state.player.currentHp = p.hp;
+      spawnEnemy();
+    }
+    function battleTick() {
+      if (state.mode !== 'focus') return;
+      const p = playerStats();
+      const dealt = Math.max(1, p.atk - state.enemy.def + Math.floor(Math.random() * 4));
+      const taken = Math.max(1, state.enemy.atk - p.def + Math.floor(Math.random() * 3));
+      state.enemy.currentHp -= dealt;
+      if (state.enemy.currentHp <= 0) {
+        rewardLoot();
+        render();
+        return;
+      }
+      state.player.currentHp -= taken;
+      if (state.player.currentHp <= 0) {
+        addLog(`Fell to ${state.enemy.name}. Recovering and retrying the floor.`);
+        state.player.currentHp = p.hp;
+        state.enemy.currentHp = state.enemy.hp;
+      } else {
+        addLog(`You hit ${state.enemy.name} for ${dealt}, took ${taken} back.`);
+      }
+      render();
+    }
+    function startBattleLoop() {
+      clearInterval(state.battleTimer);
+      if (state.mode === 'focus' && state.running) {
+        state.battleTimer = setInterval(battleTick, 2500);
+      }
+    }
+    function tick() {
+      if (!state.running) return;
+      if (state.timeLeft > 0) {
+        state.timeLeft -= 1;
+        if (state.timeLeft % 60 === 0 && state.mode === 'focus') {
+          addLog('Another focused minute passed, the fight continues.');
+        }
+      } else {
+        state.mode = state.mode === 'focus' ? 'break' : 'focus';
+        state.timeLeft = (state.mode === 'focus' ? state.focusMinutes : state.breakMinutes) * 60;
+        addLog(state.mode === 'focus'
+          ? 'Focus phase started, combat resumed automatically.'
+          : 'Break phase started, combat paused. You may configure loadout now.');
+        startBattleLoop();
+      }
+      render();
+    }
+    function startTimer() {
+      if (state.running) return;
+      state.running = true;
+      addLog(state.mode === 'focus' ? 'Pomodoro started, entering battle.' : 'Break timer started.');
+      state.timer = setInterval(tick, 1000);
+      startBattleLoop();
+      render();
+    }
+    function pauseTimer() {
+      state.running = false;
+      clearInterval(state.timer);
+      clearInterval(state.battleTimer);
+      addLog('Timer paused.');
+      render();
+    }
+    function resetTimer() {
+      pauseTimer();
+      state.timeLeft = (state.mode === 'focus' ? state.focusMinutes : state.breakMinutes) * 60;
+      addLog('Timer reset.');
+      render();
+    }
+    function switchPhase() {
+      state.mode = state.mode === 'focus' ? 'break' : 'focus';
+      state.timeLeft = (state.mode === 'focus' ? state.focusMinutes : state.breakMinutes) * 60;
+      addLog(state.mode === 'focus' ? 'Switched to focus phase.' : 'Switched to break phase.');
+      startBattleLoop();
+      render();
+    }
+    function equipSelected() {
+      if (state.mode !== 'break') {
+        addLog('You can only change loadout during break time.');
+        return;
+      }
+      const id = document.getElementById('inventorySelect').value;
+      if (!id) return;
+      const item = getItem(id);
+      state.player[item.slot] = id;
+      addLog(`Equipped ${item.name} in ${item.slot}.`);
+      const p = playerStats();
+      state.player.currentHp = Math.min(state.player.currentHp, p.hp);
+      render();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startTimer);
+    document.getElementById('pauseBtn').addEventListener('click', pauseTimer);
+    document.getElementById('resetBtn').addEventListener('click', resetTimer);
+    document.getElementById('switchBtn').addEventListener('click', switchPhase);
+    document.getElementById('equipBtn').addEventListener('click', equipSelected);
+    document.getElementById('focusLength').addEventListener('change', e => {
+      state.focusMinutes = Number(e.target.value);
+      if (state.mode === 'focus') state.timeLeft = state.focusMinutes * 60;
+      render();
+    });
+    document.getElementById('breakLength').addEventListener('change', e => {
+      state.breakMinutes = Number(e.target.value);
+      if (state.mode === 'break') state.timeLeft = state.breakMinutes * 60;
+      render();
+    });
+
+    load();
+    spawnEnemy();
+    if (!state.logs.length) addLog('Game ready. Start a focus session to begin auto-battling.');
+    render();
+  </script>
+</body>
+</html>
