@@ -6,7 +6,7 @@
   <title>Pomodoro Battle</title>
   <style>
     :root {
-      --bg: #f6f1e8;
+      --bg: #f1ece2;
       --paper: #fffdf8;
       --ink: #2f241a;
       --muted: #6e5a45;
@@ -15,6 +15,9 @@
       --line: #dfd2be;
       --good: #73955b;
       --bad: #b7634f;
+      --clock-dark: #222;
+      --clock-mid: #393939;
+      --clock-text: #f4efe6;
     }
     * { box-sizing: border-box; }
     body {
@@ -23,126 +26,65 @@
       background: linear-gradient(180deg, #f8f3ea 0%, #efe2cc 100%);
       color: var(--ink);
     }
-    .wrap {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 28px 18px 60px;
-    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 18px 60px; }
     h1, h2, h3, p { margin-top: 0; }
-    .hero, .card {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      box-shadow: 0 10px 30px rgba(87, 63, 36, 0.08);
-    }
+    .hero, .card { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 10px 30px rgba(87, 63, 36, 0.08); }
     .hero { padding: 24px; }
-    .grid {
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 18px;
-      margin-top: 18px;
-    }
+    .grid { display: grid; grid-template-columns: 340px 1fr; gap: 18px; margin-top: 18px; }
     .left, .right { display: grid; gap: 18px; align-content: start; }
     .card { padding: 18px; }
-    .timer {
-      text-align: center;
-      padding: 16px 8px 8px;
+    .timer { text-align: center; padding: 16px 8px 8px; }
+    .mode-badge { display: inline-block; padding: 6px 12px; border-radius: 999px; background: #f1e5d4; color: var(--accent); font-weight: 700; letter-spacing: .3px; }
+    .flip-clock { text-align: center; perspective: 400px; margin: 18px auto 10px; }
+    .flip-clock__piece { display: inline-block; margin: 0 3px; }
+    .flip-clock__slot { font-size: 12px; margin-top: 8px; color: var(--muted); letter-spacing: .8px; text-transform: uppercase; }
+    .clock-separator { display: inline-block; font-size: 48px; font-weight: 700; color: var(--accent); transform: translateY(-18px); margin: 0 4px; }
+    .card-face { display: block; position: relative; padding-bottom: 0.72em; font-size: 68px; line-height: 0.95; }
+    .card__top, .card__bottom, .card__back::before, .card__back::after {
+      display: block; height: 0.72em; color: #ccc; background: var(--clock-dark); padding: 0.25em 0.25em; border-radius: 0.15em 0.15em 0 0; backface-visibility: hidden; transform-style: preserve-3d; width: 1.8em; transform: translateZ(0);
     }
-    .mode-badge {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: #f1e5d4;
-      color: var(--accent);
-      font-weight: 700;
-      letter-spacing: .3px;
+    .card__top { overflow: hidden; }
+    .card__bottom {
+      color: var(--clock-text); position: absolute; top: 50%; left: 0; border-top: solid 1px #000; background: var(--clock-mid); border-radius: 0 0 0.15em 0.15em; pointer-events: none; overflow: hidden;
     }
-    .clock {
-      font-size: 64px;
-      font-weight: 700;
-      margin: 14px 0 8px;
-      color: var(--accent);
+    .card__bottom::after { content: attr(data-value); display: block; margin-top: -0.72em; }
+    .card__back { position: absolute; top: 0; height: 100%; left: 0; pointer-events: none; }
+    .card__back::before { content: attr(data-value); position: relative; z-index: -1; overflow: hidden; }
+    .flip .card__back::before { animation: flipTop 0.3s cubic-bezier(.37,.01,.94,.35); animation-fill-mode: both; transform-origin: center bottom; }
+    .flip .card__back .card__bottom { transform-origin: center top; animation-fill-mode: both; animation: flipBottom 0.6s cubic-bezier(.15,.45,.28,1); }
+    @keyframes flipTop {
+      0% { transform: rotateX(0deg); z-index: 2; }
+      0%, 99% { opacity: 0.99; }
+      100% { transform: rotateX(-90deg); opacity: 0; }
     }
-    .controls, .row, .gear-grid, .stats-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
+    @keyframes flipBottom {
+      0%, 50% { z-index: -1; transform: rotateX(90deg); opacity: 0; }
+      51% { opacity: 0.99; }
+      100% { opacity: 0.99; transform: rotateX(0deg); z-index: 5; }
     }
+    .controls, .row, .gear-grid, .stats-grid { display: flex; flex-wrap: wrap; gap: 10px; }
     .stats-grid { gap: 12px; }
-    .stat, .loot-item {
-      flex: 1 1 120px;
-      background: #fbf7f0;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 10px 12px;
-    }
-    button, select {
-      font: inherit;
-      border-radius: 12px;
-      border: 1px solid #cdb69b;
-      padding: 10px 14px;
-      background: #fff9f0;
-      color: var(--accent);
-      cursor: pointer;
-    }
-    button.primary {
-      background: linear-gradient(180deg, var(--accent-2), var(--accent));
-      color: white;
-      border-color: var(--accent);
-    }
+    .stat, .loot-item { flex: 1 1 120px; background: #fbf7f0; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+    button, select { font: inherit; border-radius: 12px; border: 1px solid #cdb69b; padding: 10px 14px; background: #fff9f0; color: var(--accent); cursor: pointer; }
+    button.primary { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: white; border-color: var(--accent); }
     button:disabled { opacity: .45; cursor: not-allowed; }
-    .battle {
-      display: grid;
-      grid-template-columns: 1fr 140px 1fr;
-      gap: 14px;
-      align-items: center;
-    }
-    .unit {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 16px;
-      background: #fcfaf6;
-    }
+    .battle { display: grid; grid-template-columns: 1fr 140px 1fr; gap: 14px; align-items: center; }
+    .unit { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: #fcfaf6; }
     .unit h3 { margin-bottom: 8px; }
-    .hpbar {
-      height: 14px;
-      background: #e6d8c3;
-      border-radius: 999px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-    .fill {
-      height: 100%;
-      width: 100%;
-      transition: width .25s ease;
-      background: linear-gradient(90deg, #84a96c, var(--good));
-    }
+    .hpbar { height: 14px; background: #e6d8c3; border-radius: 999px; overflow: hidden; margin-top: 8px; }
+    .fill { height: 100%; width: 100%; transition: width .25s ease; background: linear-gradient(90deg, #84a96c, var(--good)); }
     .enemy .fill { background: linear-gradient(90deg, #d08a73, var(--bad)); }
-    .vs {
-      text-align: center;
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--muted);
-    }
-    .log {
-      min-height: 180px;
-      max-height: 280px;
-      overflow: auto;
-      background: #fbf7f0;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      line-height: 1.7;
-    }
+    .vs { text-align: center; font-size: 28px; font-weight: 700; color: var(--muted); }
+    .log { min-height: 180px; max-height: 280px; overflow: auto; background: #fbf7f0; border: 1px solid var(--line); border-radius: 14px; padding: 12px; line-height: 1.7; }
     .log-entry { padding: 6px 0; border-bottom: 1px dashed #e7dccb; }
     .log-entry:last-child { border-bottom: none; }
     .muted { color: var(--muted); }
-    .focus-only { color: var(--good); font-weight: 700; }
-    .break-only { color: var(--bad); font-weight: 700; }
     @media (max-width: 900px) {
       .grid { grid-template-columns: 1fr; }
       .battle { grid-template-columns: 1fr; }
       .vs { display: none; }
+      .card-face { font-size: 54px; }
+      .clock-separator { font-size: 40px; transform: translateY(-14px); }
     }
   </style>
 </head>
@@ -157,7 +99,13 @@
       <div class="left">
         <div class="card timer">
           <div class="mode-badge" id="modeBadge">Focus Phase</div>
-          <div class="clock" id="clock">25:00</div>
+          <div class="flip-clock" id="clock">
+            <span class="flip-clock__piece" id="minutesTens"><b class="card-face"><b class="card__top">2</b><b class="card__bottom" data-value="2"></b><b class="card__back" data-value="2"><b class="card__bottom" data-value="2"></b></b></b><span class="flip-clock__slot">Min</span></span>
+            <span class="flip-clock__piece" id="minutesOnes"><b class="card-face"><b class="card__top">5</b><b class="card__bottom" data-value="5"></b><b class="card__back" data-value="5"><b class="card__bottom" data-value="5"></b></b></b><span class="flip-clock__slot">Min</span></span>
+            <span class="clock-separator">:</span>
+            <span class="flip-clock__piece" id="secondsTens"><b class="card-face"><b class="card__top">0</b><b class="card__bottom" data-value="0"></b><b class="card__back" data-value="0"><b class="card__bottom" data-value="0"></b></b></b><span class="flip-clock__slot">Sec</span></span>
+            <span class="flip-clock__piece" id="secondsOnes"><b class="card-face"><b class="card__top">0</b><b class="card__bottom" data-value="0"></b><b class="card__back" data-value="0"><b class="card__bottom" data-value="0"></b></b></b><span class="flip-clock__slot">Sec</span></span>
+          </div>
           <p class="muted" id="phaseText">Auto-battle is active while you focus.</p>
           <div class="controls">
             <button class="primary" id="startBtn">Start</button>
@@ -359,6 +307,38 @@
       }
       bag.innerHTML = keys.map(key => `<div class="loot-item"><strong>${getItem(key)?.name || key}</strong><div>x${state.lootCounts[key]}</div></div>`).join('');
     }
+    function updateFlipPiece(id, value) {
+      const piece = document.getElementById(id);
+      const top = piece.querySelector('.card__top');
+      const bottom = piece.querySelector('.card__bottom');
+      const back = piece.querySelector('.card__back');
+      const backBottom = piece.querySelector('.card__back .card__bottom');
+      const current = top.textContent;
+      if (current === value) return;
+      back.setAttribute('data-value', current);
+      backBottom.setAttribute('data-value', current);
+      bottom.setAttribute('data-value', current);
+      piece.classList.remove('flip');
+      void piece.offsetWidth;
+      piece.classList.add('flip');
+      top.textContent = value;
+      bottom.setAttribute('data-value', value);
+      setTimeout(() => {
+        back.setAttribute('data-value', value);
+        backBottom.setAttribute('data-value', value);
+        piece.classList.remove('flip');
+      }, 620);
+    }
+
+    function renderClock() {
+      const minutes = String(Math.floor(state.timeLeft / 60)).padStart(2, '0');
+      const seconds = String(state.timeLeft % 60).padStart(2, '0');
+      updateFlipPiece('minutesTens', minutes[0]);
+      updateFlipPiece('minutesOnes', minutes[1]);
+      updateFlipPiece('secondsTens', seconds[0]);
+      updateFlipPiece('secondsOnes', seconds[1]);
+    }
+
     function render() {
       const p = playerStats();
       if (!state.enemy) spawnEnemy();
@@ -367,7 +347,7 @@
       document.getElementById('phaseText').textContent = state.mode === 'focus'
         ? 'Auto-battle is active while you focus.'
         : 'Battle is paused. Use break time to adjust loadout and prepare.';
-      document.getElementById('clock').textContent = `${String(Math.floor(state.timeLeft / 60)).padStart(2, '0')}:${String(state.timeLeft % 60).padStart(2, '0')}`;
+      renderClock();
       document.getElementById('levelStat').textContent = state.player.level;
       document.getElementById('atkStat').textContent = p.atk;
       document.getElementById('defStat').textContent = p.def;
